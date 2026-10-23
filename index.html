@@ -1,0 +1,294 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terzo Millennio 3D</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{overflow:hidden;background:#101319;touch-action:none;font-family:Arial,sans-serif}
+canvas{display:block}
+#ui{position:fixed;top:24px;left:0;width:100%;text-align:center;color:white;pointer-events:none}
+h1{font-size:22px;letter-spacing:5px;font-weight:800}
+p{font-size:10px;letter-spacing:3px;color:#a9b3c5;margin-top:8px}
+#bottom{position:fixed;bottom:22px;left:0;width:100%;text-align:center;color:#9ba5b5;font-size:11px;letter-spacing:2px;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="ui">
+<h1>TERZO MILLENNIO</h1>
+<p>FUTURE IS ELECTRIC</p>
+</div>
+<div id="bottom">DRAG TO ROTATE · TOUCH TO EXPLORE</div>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x101319);
+scene.fog=new THREE.Fog(0x101319,14,32);
+
+const camera=new THREE.PerspectiveCamera(38,innerWidth/innerHeight,.1,100);
+camera.position.set(6,3.4,8);
+camera.lookAt(0,.65,0);
+
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.25;
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xcce4ff,0x171019,2));
+
+function light(color,intensity,x,y,z){
+ const l=new THREE.DirectionalLight(color,intensity);
+ l.position.set(x,y,z);scene.add(l);
+}
+light(0xffffff,3,4,8,5);
+light(0x3377ff,3,-5,3,-4);
+light(0xff2438,2,2,3,-6);
+
+const floor=new THREE.Mesh(
+ new THREE.PlaneGeometry(200,200),
+ new THREE.MeshStandardMaterial({color:0x171a21,roughness:.34,metalness:.3})
+);
+floor.rotation.x=-Math.PI/2;
+floor.position.y=-.025;
+scene.add(floor);
+
+const car=new THREE.Group();
+scene.add(car);
+
+const paint=new THREE.MeshPhysicalMaterial({
+ color:0x86e51b,metalness:.68,roughness:.22,
+ clearcoat:1,clearcoatRoughness:.15
+});
+const dark=new THREE.MeshStandardMaterial({color:0x11141a,metalness:.5,roughness:.3});
+const glass=new THREE.MeshPhysicalMaterial({
+ color:0x101b2b,metalness:.55,roughness:.13,
+ clearcoat:1
+});
+const carbon=new THREE.MeshStandardMaterial({
+ color:0x080a0e,metalness:.45,roughness:.42
+});
+const alloy=new THREE.MeshStandardMaterial({
+ color:0xb5c0cc,metalness:.9,roughness:.22
+});
+const led=new THREE.MeshBasicMaterial({color:0xeaffff});
+const redLED=new THREE.MeshBasicMaterial({color:0xff102c});
+
+function mesh(geometry,material,x,y,z,parent=car){
+ const m=new THREE.Mesh(geometry,material);
+ m.position.set(x,y,z);
+ m.castShadow=true;
+ m.receiveShadow=true;
+ parent.add(m);
+ return m;
+}
+
+function hull(points,material){
+ const shape=new THREE.Shape();
+ shape.moveTo(points[0][0],points[0][1]);
+ for(let i=1;i<points.length;i++)shape.lineTo(points[i][0],points[i][1]);
+ shape.closePath();
+ const g=new THREE.ExtrudeGeometry(shape,{depth:1.9,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.035,bevelThickness:.025});
+ g.translate(0,0,-.95);
+ return mesh(g,material,0,0,0);
+}
+
+// Main low wedge body, length axis is Z.
+// Front of car = +Z.
+hull([
+ [-.72,.35],[-.92,.49],[-.90,.67],
+ [-.65,.76],[-.43,.78],[0,.73],
+ [.43,.78],[.65,.76],[.90,.67],
+ [.92,.49],[.72,.35]
+],paint);
+
+// Pointed nose
+hull([
+ [-.72,.40],[-.78,.57],[-.53,.66],
+ [0,.69],[.53,.66],[.78,.57],[.72,.40]
+],paint).scale.z=1.85;
+
+// Bonnet angular panels
+hull([
+ [-.72,.59],[-.48,.71],[0,.74],
+ [.48,.71],[.72,.59],[.47,.55],[0,.62],[-.47,.55]
+],paint).scale.z=.72;
+
+// Wide lower front splitter
+mesh(new THREE.BoxGeometry(2.05,.09,.43),carbon,0,.34,1.65);
+
+// Front angular canards
+for(const s of [-1,1]){
+ const fin=mesh(new THREE.BoxGeometry(.12,.10,.63),carbon,s*.91,.43,1.37);
+ fin.rotation.y=s*.19;
+}
+
+// Cabin: compact, dark, fighter-jet canopy
+hull([
+ [-.52,.72],[-.42,1.02],[-.25,1.25],
+ [.25,1.25],[.42,1.02],[.52,.72]
+],glass).scale.z=.87;
+
+// Roof highlight
+hull([
+ [-.25,1.24],[-.18,1.28],[.18,1.28],[.25,1.24]
+],paint).scale.z=.78;
+
+// Side window panels
+for(const s of [-1,1]){
+ const w=mesh(new THREE.BoxGeometry(.025,.29,.91),glass,s*.57,.99,-.06);
+ w.rotation.x=-.08;
+}
+
+// Side skirts
+for(const s of [-1,1]){
+ const skirt=mesh(new THREE.BoxGeometry(.13,.15,2.45),carbon,s*.91,.36,-.03);
+ skirt.rotation.x=.015;
+ // bright side blade
+ mesh(new THREE.BoxGeometry(.035,.035,1.9),paint,s*.98,.43,-.02);
+}
+
+// Sculpted side air intakes
+for(const s of [-1,1]){
+ const intake=mesh(new THREE.BoxGeometry(.045,.27,.61),carbon,s*.89,.63,-.53);
+ intake.rotation.x=-.2;
+ const trim=mesh(new THREE.BoxGeometry(.04,.035,.68),paint,s*.92,.79,-.50);
+ trim.rotation.x=-.2;
+}
+
+// Wheel assemblies with futuristic turbine rims
+const wheels=[];
+function wheel(x,z){
+ const group=new THREE.Group();
+ group.position.set(x,.43,z);
+ car.add(group);wheels.push(group);
+
+ mesh(new THREE.CylinderGeometry(.40,.40,.24,40),carbon,0,0,0,group).rotation.z=Math.PI/2;
+
+ // Tire outer ring
+ const tireLine=mesh(new THREE.TorusGeometry(.355,.018,8,40),alloy,x>0?.126:-.126,0,0,group);
+ tireLine.rotation.y=Math.PI/2;
+
+ // Hub
+ const hub=mesh(new THREE.CylinderGeometry(.255,.255,.26,32),dark,0,0,0,group);
+ hub.rotation.z=Math.PI/2;
+
+ const face=mesh(new THREE.CylinderGeometry(.218,.218,.275,32),alloy,0,0,0,group);
+ face.rotation.z=Math.PI/2;
+
+ // Turbine spokes on both sides
+ for(const side of [-1,1]){
+  for(let i=0;i<10;i++){
+   const a=i*Math.PI/5;
+   const spoke=mesh(
+    new THREE.BoxGeometry(.025,.26,.043),
+    i%2?dark:alloy,
+    side*.145,
+    Math.sin(a)*.115,
+    Math.cos(a)*.115,
+    group
+   );
+   spoke.rotation.x=-a;
+  }
+  const cap=mesh(new THREE.CylinderGeometry(.075,.075,.29,24),carbon,side*.015,0,0,group);
+  cap.rotation.z=Math.PI/2;
+ }
+}
+wheel(-1.0,1.12);
+wheel(1.0,1.12);
+wheel(-1.0,-1.15);
+wheel(1.0,-1.15);
+
+// Angular Y-inspired LED headlights on front face
+for(const s of [-1,1]){
+ const head=mesh(new THREE.BoxGeometry(.49,.045,.035),led,s*.49,.60,1.72);
+ head.rotation.y=s*-.30;
+ const diagonal=mesh(new THREE.BoxGeometry(.045,.22,.04),led,s*.69,.52,1.72);
+ diagonal.rotation.z=s*-.48;
+
+ // Front air intakes
+ mesh(new THREE.BoxGeometry(.37,.16,.04),carbon,s*.43,.43,1.73);
+
+ // Hood creases
+ const crease=mesh(new THREE.BoxGeometry(.018,.018,.87),dark,s*.28,.765,1.02);
+ crease.rotation.x=-.02;
+}
+
+// Center nose badge
+mesh(new THREE.BoxGeometry(.12,.075,.025),dark,0,.61,1.76);
+
+// Rear diffuser and rear lights
+mesh(new THREE.BoxGeometry(1.92,.18,.43),carbon,0,.34,-1.52);
+for(const s of [-1,1]){
+ const tail=mesh(new THREE.BoxGeometry(.62,.055,.035),redLED,s*.57,.67,-1.68);
+ tail.rotation.y=s*.15;
+}
+
+// Aggressive rear diffuser fins
+for(let i=-2;i<=2;i++){
+ const fin=mesh(new THREE.BoxGeometry(.035,.22,.43),alloy,i*.29,.30,-1.56);
+ fin.rotation.x=-.12;
+}
+
+// Futuristic rear wing
+mesh(new THREE.BoxGeometry(1.95,.09,.39),carbon,0,1.06,-1.60);
+for(const s of [-1,1]){
+ const support=mesh(new THREE.BoxGeometry(.07,.37,.08),paint,s*.57,.86,-1.48);
+ support.rotation.x=-.14;
+}
+
+// Ground shadow
+const shadow=mesh(
+ new THREE.CircleGeometry(2.3,48),
+ new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.48}),
+ 0,.005,0,scene
+);
+shadow.rotation.x=-Math.PI/2;
+shadow.scale.set(1.35,.7,1);
+
+// Touch controls
+let dragging=false,lastX=0,lastY=0;
+let targetY=.45,targetX=0;
+renderer.domElement.addEventListener('pointerdown',e=>{
+ dragging=true;lastX=e.clientX;lastY=e.clientY;
+ renderer.domElement.setPointerCapture(e.pointerId);
+});
+renderer.domElement.addEventListener('pointermove',e=>{
+ if(!dragging)return;
+ targetY+=(e.clientX-lastX)*.012;
+ targetX+=(e.clientY-lastY)*.008;
+ lastX=e.clientX;lastY=e.clientY;
+});
+function release(){dragging=false;}
+renderer.domElement.addEventListener('pointerup',release);
+renderer.domElement.addEventListener('pointercancel',release);
+
+const clock=new THREE.Clock();
+function animate(){
+ requestAnimationFrame(animate);
+ const t=clock.getElapsedTime();
+ if(!dragging)targetY+=.0022;
+ targetX=THREE.MathUtils.clamp(targetX,-.32,.32);
+ car.rotation.y+=(targetY-car.rotation.y)*.09;
+ car.rotation.x+=(targetX-car.rotation.x)*.09;
+ car.position.y=.035+Math.sin(t*1.3)*.025;
+ renderer.render(scene,camera);
+}
+animate();
+
+window.addEventListener('resize',()=>{
+ camera.aspect=innerWidth/innerHeight;
+ camera.updateProjectionMatrix();
+ renderer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>
